@@ -1,0 +1,19 @@
+{
+  "name": "chat-bot",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "es6": "^0.0.7",
+    "mongodb": "^4.7.0",
+    "netlify": "^11.0.2",
+    "telebot": "^1.4.1"
+  },
+  "description": ""
+}
