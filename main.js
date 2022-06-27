@@ -1,11 +1,14 @@
 
-
+let connectDB = require('../chat-bot/functions/connectDB/connectDB');
 const TeleBot = require('telebot')
 const {
     default: axios
     } = require('axios');
 const { sendPhoto, keyboard, sendMessage } = require('telebot/lib/methods');
-   
+
+let {log} = require('../chat-bot/utils/utlis');
+var getCollection = require('../chat-bot/functions/getProductos/getProductos');
+var guardarDatos = require ("../chat-bot/functions/usuarios/registrar")
 const ENDPOINT = '';
 // Botones 
 const BUTTONS = {
@@ -41,8 +44,11 @@ const BUTTONS = {
     verCarrito: {
         label: 'Ver el carrito de compras',
         command: '/verCarrito'
+    },
+    registrar:{
+        label: 'Crear cuenta',
+        command: '/formulario'
     }
-
 
 }
 
@@ -61,22 +67,18 @@ const bot = new TeleBot({
 bot.on('/productos', (msg) =>  {
     async function getProductos() {
         try {
-            const respuesta = await axios.get(ENDPOINT);
-           let productos = respuesta.data;
-           let resultado = `id  |  Nombre                           |  Precio\n`;
-         let len = productos.length;
+           let productos = await getCollection('Productos', {})
+            let resultado = `id  |  Nombre                           |  Precio\n`;
          let i=0;
-         for (;i<len;i++){
-           resultado += `${productos[i].id}  | ${productos[i].title.substring(0,20)} | $${productos[i].price} \n`;
-           } 
-           return bot.sendMessage(msg.chat.id,` ${resultado}`);
+         for (;i<20;i++){
+           resultado += `${productos[i].id}  | ${productos[i].name.substring(0,20)} | $${productos[i].price} \n`;
+        } 
+         return  bot.sendMessage(msg.chat.id,` ${resultado}`);
         } catch (error) {
-            console.log(error);
-        }
+            log(error);
+        } 
     }
-    
-
-    getProductos() 
+getProductos()
     let replyMarkup = bot.keyboard([
         [BUTTONS.inicio.label, BUTTONS.buscar.label]
     ], {resize: true});
@@ -86,22 +88,22 @@ bot.on('/productos', (msg) =>  {
  
   //Buscar producto
   bot.on ('/buscar', (msg) => {
-    return bot.sendMessage(msg.chat.id, ' A continuacion introduzca el id del producto que desea consultar', {ask: 'id'});
+    return bot.sendMessage(msg.from.id, ' A continuacion introduzca el id del producto que desea consultar', {ask: 'id'});
     })
   //Mostrar producto
     bot.on ('ask.id', msg => {
         const id = Number(msg.text);
 
         if (!id) {
-            return bot.sendMessage(msg.chat.id, 'Introduzca un id valido. Ej: 2', {ask: 'id'});
+            return bot.sendMessage(msg.from.id, 'Introduzca un id valido. Ej: 2', {ask: 'id'});
         } else {
             async function getProductID(id) {
-                const respuesta = await axios.get(ENDPOINT+`/${id}`);
-               let producto = respuesta.data;
-               let resultado = `id: ${producto.id}\n Nombre: ${producto.title}\n 
-Precio: $${producto.price} \n Descripcion: \n ${producto.description} \n ${producto.image} \n
-Categoria: ${producto.category}\n
-Valoracion: promedio ${producto.rating.rate} de ${producto.rating.count} valoraciones \n`;
+                const producto = await getCollection('Productos', {id: id})
+        
+               let resultado = `id: ${producto[0].id}\n Nombre: ${producto[0].title}\n 
+Precio: $${producto[0].price} \n Descripcion: \n ${producto[0].description} \n ${producto[0].image} \n
+Categoria: ${producto[0].category}\n
+Valoracion: promedio ${producto[0].rating.rate} de ${producto[0].rating.count} valoraciones \n`;
 
                 return bot.sendMessage(msg.chat.id, `${resultado}`);
             }
@@ -115,6 +117,23 @@ Valoracion: promedio ${producto.rating.rate} de ${producto.rating.count} valorac
         }
 
     })
+
+
+    //Registrarse 
+    bot.on ('/formulario', (msg) => {
+        bot.sendMessage(msg.from.id, ` Para registrarse introduzca los datos necesarios en el siguiente orden ]\n
+    "correo usuario contraseña ciudad"`, {ask: 'datos'})
+    })
+    
+    bot.on ('ask.datos', msg => {
+     
+  
+        
+        guardarDatos(msg.text)
+    })
+
+
+
 /* En desarrollo
     //Agregar producto al carrito.
 
@@ -184,7 +203,7 @@ return bot.sendMessage(msg.chat.id, `${carro}`, {replyMarkup});
 })
 
 */
-bot.on('/pagos', async (msg) => {
+/*bot.on('/pagos', async (msg) => {
 
    try {
 
@@ -199,7 +218,7 @@ await bot.sendPhoto(msg.chat.id, 'imagenes/criptos.png');
   } catch (error) {
       console.log(error)
   }
-});
+});*/
 bot.on('/entrega', (msg) => msg.reply.text('esto es entrega'));
 
 // menu inicial
@@ -207,7 +226,7 @@ bot.on('/start', (msg) => {
 
     let replyMarkup = bot.keyboard([
         [BUTTONS.productos.label, BUTTONS.pagos.label],
-        [BUTTONS.entrega.label]
+        [BUTTONS.entrega.label, BUTTONS.registrar.label]
     ], {resize: true});
 
     return bot.sendMessage(msg.from.id, 'Bienvenido a la tienda. \n Elija la opcion de su preferencia',{replyMarkup});
@@ -215,3 +234,5 @@ bot.on('/start', (msg) => {
 
 
 bot.start();
+
+module.exports = bot; 
